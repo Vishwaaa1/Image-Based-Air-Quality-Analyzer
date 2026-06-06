@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air Pollution Detector | AI-Powered Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <canvas id="particles"></canvas>
+    
+    <div class="theme-toggle" onclick="toggleTheme()">
+        <i class="fas fa-moon"></i>
+    </div>
+
+    <div class="container">
+        <header class="header">
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <i class="fas fa-wind"></i>
+                </div>
+                <div>
+                    <h1 class="title">Air Pollution Detector</h1>
+                    <p class="subtitle">AI-Powered Environmental Analysis</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="upload-section glass-card">
+                <div class="section-header">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h2>Upload Air Quality Image</h2>
+                </div>
+                
+                <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                    <div class="drop-zone" id="dropZone">
+                        <div class="drop-zone-icon">
+                            <i class="fas fa-image"></i>
+                        </div>
+                        <h3>Drag & Drop your image here</h3>
+                        <p>or click to browse</p>
+                        <input type="file" name="image" id="fileInput" accept="image/*" required hidden>
+                        <div class="file-preview" id="filePreview"></div>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary" id="analyzeBtn">
+                        <span class="btn-text">Analyze Air Quality</span>
+                        <span class="btn-loader"><i class="fas fa-spinner fa-spin"></i></span>
+                    </button>
+                </form>
+
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        <div class="alert-message">
+                            {% for message in messages %}
+                                <i class="fas fa-exclamation-circle"></i> {{ message }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <div class="info-cards">
+                <div class="info-card glass-card">
+                    <div class="info-icon clean-icon">
+                        <i class="fas fa-leaf"></i>
+                    </div>
+                    <h3>Clean Air</h3>
+                    <p>PM2.5 &lt; 50 µg/m³</p>
+                    <span class="aqi-range">AQI: 0-50</span>
+                </div>
+                
+                <div class="info-card glass-card">
+                    <div class="info-icon moderate-icon">
+                        <i class="fas fa-smog"></i>
+                    </div>
+                    <h3>Moderate</h3>
+                    <p>PM2.5: 50-150 µg/m³</p>
+                    <span class="aqi-range">AQI: 51-150</span>
+                </div>
+                
+                <div class="info-card glass-card">
+                    <div class="info-icon polluted-icon">
+                        <i class="fas fa-skull-crossbones"></i>
+                    </div>
+                    <h3>Polluted</h3>
+                    <p>PM2.5 &gt; 150 µg/m³</p>
+                    <span class="aqi-range">AQI: 151+</span>
+                </div>
+            </div>
+        </div>
+
+        {% if history %}
+        <div class="history-section">
+            <div class="section-header">
+                <i class="fas fa-history"></i>
+                <h2>Recent Analysis History</h2>
+            </div>
+            
+            <div class="history-grid">
+                {% for entry in history[:6] %}
+                <div class="history-card glass-card" onclick="showHistoryDetail({{ loop.index0 }})">
+                    <div class="history-image">
+                        <img src="{{ url_for('uploaded_file', filename=entry.image) }}" alt="Analyzed image">
+                        <div class="history-badge {{ entry.prediction }}">
+                            {{ entry.prediction|capitalize }}
+                        </div>
+                    </div>
+                    <div class="history-details">
+                        <div class="metric-row">
+                            <span class="metric-label">AQI</span>
+                            <span class="metric-value aqi-{{ 'good' if entry.aqi < 50 else 'moderate' if entry.aqi < 150 else 'unhealthy' }}">
+                                {{ entry.aqi }}
+                            </span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">PM2.5</span>
+                            <span class="metric-value">{{ entry.pm25 }} µg/m³</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">PM10</span>
+                            <span class="metric-value">{{ entry.pm10 }} µg/m³</span>
+                        </div>
+                        {% if entry.gradcam %}
+                        <a href="{{ url_for('output_file', filename=entry.gradcam) }}" target="_blank" class="gradcam-link">
+                            <i class="fas fa-eye"></i> View Grad-CAM
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <footer class="footer">
+            <p>Powered by ResNet18 Deep Learning Model | Real-time Air Quality Analysis</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Results | Air Pollution Detector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <canvas id="particles"></canvas>
+    
+    <div class="theme-toggle" onclick="toggleTheme()">
+        <i class="fas fa-moon"></i>
+    </div>
+
+    <div class="container">
+        <header class="header">
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <i class="fas fa-wind"></i>
+                </div>
+                <div>
+                    <h1 class="title">Analysis Complete</h1>
+                    <p class="subtitle">AI-Powered Air Quality Assessment</p>
+                </div>
+            </div>
+            <a href="{{ url_for('index') }}" class="btn-back">
+                <i class="fas fa-arrow-left"></i> New Analysis
+            </a>
+        </header>
+
+        <div class="results-container">
+            <div class="result-main">
+                <div class="prediction-card glass-card {{ entry.prediction }}">
+                    <div class="prediction-header">
+                        <div class="prediction-icon">
+                            {% if entry.prediction == 'clean' %}
+                                <i class="fas fa-leaf"></i>
+                            {% elif entry.prediction == 'moderate' %}
+                                <i class="fas fa-smog"></i>
+                            {% else %}
+                                <i class="fas fa-skull-crossbones"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h2 class="prediction-title">{{ entry.prediction|upper }}</h2>
+                            <p class="prediction-subtitle">Air Quality Classification</p>
+                        </div>
+                    </div>
+                    
+                    <div class="confidence-bars">
+                        <h3>Model Confidence</h3>
+                        {% set labels = ['Clean', 'Moderate', 'Polluted'] %}
+                        {% for i in range(3) %}
+                        <div class="confidence-item">
+                            <div class="confidence-label">
+                                <span>{{ labels[i] }}</span>
+                                <span class="confidence-value">{{ (entry.probs[i] * 100)|round(1) }}%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill prob-{{ i }}" style="width: {{ (entry.probs[i] * 100) }}%"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="aqi-gauge-card glass-card">
+                    <h3><i class="fas fa-tachometer-alt"></i> Air Quality Index</h3>
+                    <div class="aqi-gauge">
+                        <svg viewBox="0 0 200 120">
+                            <defs>
+                                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+                                    <stop offset="33%" style="stop-color:#fbbf24;stop-opacity:1" />
+                                    <stop offset="66%" style="stop-color:#f97316;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#dc2626;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            
+                            <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="url(#gaugeGradient)" stroke-width="20" stroke-linecap="round"/>
+                            
+                            <g id="needle" transform="rotate({{ ((entry.aqi / 500) * 180) - 90 }} 100 100)">
+                                <line x1="100" y1="100" x2="100" y2="35" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+                                <circle cx="100" cy="100" r="8" fill="#fff"/>
+                            </g>
+                        </svg>
+                        <div class="aqi-value">{{ entry.aqi }}</div>
+                        <div class="aqi-label">
+                            {% if entry.aqi < 50 %}Good
+                            {% elif entry.aqi < 100 %}Moderate
+                            {% elif entry.aqi < 150 %}Unhealthy for Sensitive Groups
+                            {% elif entry.aqi < 200 %}Unhealthy
+                            {% elif entry.aqi < 300 %}Very Unhealthy
+                            {% else %}Hazardous
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card glass-card pm25">
+                        <div class="metric-icon">
+                            <i class="fas fa-microscope"></i>
+                        </div>
+                        <div class="metric-content">
+                            <h4>PM2.5</h4>
+                            <div class="metric-big-value">{{ entry.pm25 }}</div>
+                            <span class="metric-unit">µg/m³</span>
+                        </div>
+                        <div class="metric-pulse"></div>
+                    </div>
+                    
+                    <div class="metric-card glass-card pm10">
+                        <div class="metric-icon">
+                            <i class="fas fa-lungs"></i>
+                        </div>
+                        <div class="metric-content">
+                            <h4>PM10</h4>
+                            <div class="metric-big-value">{{ entry.pm10 }}</div>
+                            <span class="metric-unit">µg/m³</span>
+                        </div>
+                        <div class="metric-pulse"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-sidebar">
+                <div class="image-comparison glass-card">
+                    <h3><i class="fas fa-images"></i> Image Analysis</h3>
+                    
+                    <div class="image-tabs">
+                        <button class="tab-btn active" onclick="switchTab('original')">
+                            <i class="fas fa-image"></i> Original
+                        </button>
+                        {% if entry.gradcam %}
+                        <button class="tab-btn" onclick="switchTab('gradcam')">
+                            <i class="fas fa-brain"></i> Grad-CAM
+                        </button>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="image-container">
+                        <div class="image-wrapper active" id="original">
+                            <img src="{{ url_for('uploaded_file', filename=entry.image) }}" alt="Original Image">
+                        </div>
+                        {% if entry.gradcam %}
+                        <div class="image-wrapper" id="gradcam">
+                            <img src="{{ url_for('output_file', filename=entry.gradcam) }}" alt="Grad-CAM Visualization">
+                            <div class="gradcam-info">
+                                <i class="fas fa-info-circle"></i>
+                                <span>Heatmap shows regions influencing the prediction</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="health-recommendations glass-card">
+                    <h3><i class="fas fa-heartbeat"></i> Health Recommendations</h3>
+                    <div class="recommendations-content">
+                        {% if entry.prediction == 'clean' %}
+                        <div class="recommendation-item">
+                            <i class="fas fa-check-circle"></i>
+                            <p>Air quality is satisfactory. Outdoor activities are safe.</p>
+                        </div>
+                        <div class="recommendation-item">
+                            <i class="fas fa-running"></i>
+                            <p>Great day for outdoor exercise and recreation.</p>
+                        </div>
+                        {% elif entry.prediction == 'moderate' %}
+                        <div class="recommendation-item warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>Sensitive individuals should limit prolonged outdoor exertion.</p>
+                        </div>
+                        <div class="recommendation-item">
+                            <i class="fas fa-walking"></i>
+                            <p>General public can enjoy outdoor activities with caution.</p>
+                        </div>
+                        {% else %}
+                        <div class="recommendation-item danger">
+                            <i class="fas fa-ban"></i>
+                            <p>Avoid outdoor activities. Stay indoors with air purifiers.</p>
+                        </div>
+                        <div class="recommendation-item danger">
+                            <i class="fas fa-mask"></i>
+                            <p>Wear N95 masks if you must go outside.</p>
+                        </div>
+                        <div class="recommendation-item danger">
+                            <i class="fas fa-hospital"></i>
+                            <p>Sensitive groups should seek medical advice if experiencing symptoms.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if history|length > 1 %}
+        <div class="history-section">
+            <div class="section-header">
+                <i class="fas fa-history"></i>
+                <h2>Previous Analyses</h2>
+            </div>
+            
+            <div class="history-carousel">
+                {% for e in history[1:6] %}
+                <div class="history-mini-card glass-card">
+                    <img src="{{ url_for('uploaded_file', filename=e.image) }}" alt="History">
+                    <div class="mini-card-overlay {{ e.prediction }}">
+                        <span class="mini-pred">{{ e.prediction|capitalize }}</span>
+                        <span class="mini-aqi">AQI: {{ e.aqi }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <footer class="footer">
+            <p>Analysis completed using ResNet18 CNN with Grad-CAM visualization</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        window.addEventListener('load', () => {
+            animateMetrics();
+            animateGaugeNeedle();
+        });
+    </script>
+</body>
+</html>
